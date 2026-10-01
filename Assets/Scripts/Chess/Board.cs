@@ -1,7 +1,9 @@
 using UnityEngine;
+using System;
 
 public class Board
 {
+    public event Action Changed;
     readonly Node[,] nodes = new Node[8, 8];
 
     public Board()
@@ -21,20 +23,19 @@ public class Board
         piece.Position = coord;
     }
 
-    public bool TryMovePiece(ChessPiece piece, Vector2Int destination, out ChessPiece captured)
+    public ChessPiece MovePieceTo(ChessPiece piece, Vector2Int destination)
     {
-        captured = null;
-
-        if (!piece.GetValidMoves(this).Contains(destination)) return false;
-
         Node from = GetNode(piece.Position);
         Node to = GetNode(destination);
 
-        captured = to.Occupant;
+        ChessPiece captured = to.Occupant;
         from.Occupant = null;
         to.Occupant = piece;
         piece.Position = destination;
-        return true;
+
+        Changed?.Invoke();
+
+        return captured;
     }
 
 }

@@ -17,7 +17,7 @@ public class Knight : ChessPiece
         {
             Vector2Int target = Position + dir;
 
-            if (!board.InBounds(target)) continue;   // fuera del tablero: saltar a la siguiente dirección
+            if (!board.InBounds(target)) continue;
 
             Node node = board.GetNode(target);
 
@@ -27,11 +27,18 @@ public class Knight : ChessPiece
             }
             else if (node.Occupant.Side != Side)
             {
-                moves.Add(target);                   // enemigo: se puede capturar
-            }
-            // pieza propia: no se agrega, y el foreach sigue solo
+                moves.Add(target);
+            }            
         }
 
+        return moves;
+    }
+
+    public override List<Vector2Int> GetPotentialMoves(Board board)
+    {
+        List<Vector2Int> moves = new();
+        foreach (Vector2Int dir in Directions)
+            if (board.InBounds(Position + dir)) moves.Add(Position + dir);
         return moves;
     }
 }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Queen : ChessPiece
 {
@@ -39,4 +38,6 @@ public class Queen : ChessPiece
 
         return moves;
     }
+
+    public override List<Vector2Int> GetPotentialMoves(Board board) => GetLineMoves(board, Directions);
 }

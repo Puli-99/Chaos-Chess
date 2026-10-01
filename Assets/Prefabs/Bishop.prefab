@@ -46,7 +46,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bishop
   side: 0
+  type: 3
   startPosition: {x: 0, y: 0}
+  secondsPerCell: 1
 --- !u!212 &7940359720138903231
 SpriteRenderer:
   serializedVersion: 2

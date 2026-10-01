@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class King : ChessPiece
@@ -32,6 +33,22 @@ public class King : ChessPiece
             // pieza propia: no se agrega, y el foreach sigue solo
         }
 
+        return moves;
+    }
+
+    public override List<Vector2Int> GetPotentialMoves(Board board) => GetOneLineMoves(board);
+
+    List<Vector2Int> GetOneLineMoves(Board board)
+    {
+        List<Vector2Int> moves = new();
+
+
+        foreach (Vector2Int dir in Directions)
+        {
+            if (!board.InBounds(Position + dir)) continue;
+
+            moves.Add(Position + dir);
+        }
         return moves;
     }
 }

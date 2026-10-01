@@ -36,4 +36,6 @@ public class Bishop : ChessPiece
 
         return moves;
     }
+
+    public override List<Vector2Int> GetPotentialMoves(Board board) => GetLineMoves(board, Directions);
 }

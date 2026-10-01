@@ -8,6 +8,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] ChessPiece[] pieces;
     public Board Board { get; private set; }
     public BoardSpace Space => space;
+    public GameClock Clock { get; } = new GameClock();
+    public MovementSystem Movement { get; private set; }
 
     void Awake()
     {
@@ -21,20 +23,17 @@ public class GameManager : MonoBehaviour
             Board.PlacePiece(piece, piece.StartPosition);
             piece.transform.position = space.GridToWorld(piece.StartPosition);
         }
+
+        Movement = new MovementSystem(Board);
+        Movement.PieceCaptured += piece => Destroy(piece.gameObject);
     }
 
-    private void Start()
+    void FixedUpdate()
     {
-        // Iniciar todas las piezas
+        Clock.Advance(Time.fixedDeltaTime);
+        Movement.Tick(Clock.Now);
     }
 
     //Futuro ServerRpc
-    public bool RequestMove(ChessPiece piece, Vector2Int destination)
-    {
-        if (!Board.TryMovePiece(piece, destination, out ChessPiece captured)) return false;
-
-        if (captured != null) Destroy(captured.gameObject);
-        piece.transform.position = space.GridToWorld(destination);
-        return true;
-    }
+    public bool RequestMove(ChessPiece piece, Vector2Int destination) => Movement.TryStartOrder(piece, destination, Clock.Now);
 }

@@ -45,6 +45,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89f6d7f9b5842ff40a90129ea23c8999, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Pawn
+  side: 0
+  startPosition: {x: 0, y: 0}
+  secondsPerCell: 1
 --- !u!212 &2289023893568715749
 SpriteRenderer:
   serializedVersion: 2
