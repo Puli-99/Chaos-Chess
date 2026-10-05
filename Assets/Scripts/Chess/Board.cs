@@ -17,6 +17,12 @@ public class Board
 
     public Node GetNode(Vector2Int coordinate) => InBounds(coordinate) ? nodes[coordinate.x, coordinate.y] : null;
 
+    public void RemovePiece(ChessPiece piece)
+    {
+        Node node = GetNode(piece.Position);
+        if (node != null && node.Occupant == piece) node.Occupant = null;
+    }
+
     public void PlacePiece(ChessPiece piece, Vector2Int coord)
     {
         GetNode(coord).Occupant = piece;

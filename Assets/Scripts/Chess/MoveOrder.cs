@@ -13,6 +13,8 @@ public class MoveOrder
     public float StepStartTime { get; set; }
     public float StepArrivalTime { get; set; }
 
+    public bool InConflict { get; set; }
+
     public MoveOrder(ChessPiece piece, Vector2Int destination, Vector2Int direction)
     {
         Piece = piece;

@@ -6,6 +6,9 @@ using UnityEngine.InputSystem;
 
 public class BoardController : MonoBehaviour
 {
+    [SerializeField] PieceColor localSide;
+    public PieceColor LocalSide { get => localSide; set => localSide = value; }
+
     [SerializeField] Camera cam;
     [SerializeField] InputActionReference pointAction;
     [SerializeField] InputActionReference selectAction;
@@ -65,6 +68,8 @@ public class BoardController : MonoBehaviour
 
     void OnSelect(InputAction.CallbackContext context)
     {
+        if(GameManager.Instance.GameState != GameState.ChessPlay) return;
+
         Vector2 screenPos = pointAction.action.ReadValue<Vector2>();
         Ray ray = cam.ScreenPointToRay(screenPos);
 
@@ -98,13 +103,13 @@ public class BoardController : MonoBehaviour
         // Se valida contra todas las alternativas, no solo las posibles ahora mismo.
         if (selected != null && potentialMoves.Contains(cell))
         {
-            GameManager.Instance.RequestMove(selected, cell);
+            GameManager.Instance.RequestMove(selected, cell, localSide);
             Deselect();
             return;
         }
 
         ChessPiece piece = Board.GetNode(cell).Occupant;
-        if (piece != null && !Movement.IsMoving(piece)) Select(piece);
+        if (piece != null && !Movement.IsMoving(piece) && piece.Side == localSide) Select(piece);
         else Deselect();
     }
 
