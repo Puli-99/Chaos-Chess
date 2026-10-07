@@ -1057,6 +1057,17 @@
                     "action": "Deselect",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1f2d9b94-426d-4bc8-901c-0ef1abd3ae9f",
+                    "path": "<Touchscreen>/touch*/Press",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Deselect",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

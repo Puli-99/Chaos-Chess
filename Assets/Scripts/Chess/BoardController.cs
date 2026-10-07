@@ -37,7 +37,7 @@ public class BoardController : MonoBehaviour
         deselectAction.action.Enable();
 
         selectAction.action.performed += OnSelect;
-        //deselectAction.action.performed += OnDeselect;
+        deselectAction.action.performed += OnDeselect;
 
     }
 
@@ -84,6 +84,11 @@ public class BoardController : MonoBehaviour
 
         if (!Board.InBounds(cell)) { Deselect(); return; }
         HandleClick(cell);
+    }
+
+    void OnDeselect(InputAction.CallbackContext context)
+    {
+        Deselect();
     }
 
     #region Visual Debug
