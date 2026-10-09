@@ -1,22 +1,36 @@
-using System;
+using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class TempServerStarter : MonoBehaviour
 {
-    [SerializeField] Button startHostButton;
-    [SerializeField] Button startClientButton;
-
-    public event Action onStartHost;
-    public event Action onStartClient;
+    [SerializeField] Button createLobbyButton;
+    [SerializeField] Button joinLobbyButton;
+    [SerializeField] TMP_InputField lobbyCodeInputField;
+    [SerializeField] InputActionReference submitAction;
 
     void Start()
     {
-        startHostButton.onClick.AddListener(() => onStartHost?.Invoke());
-        startClientButton.onClick.AddListener(() => onStartClient?.Invoke());
+        createLobbyButton.onClick.AddListener(async () => await SessionManager.Instance.InitializeLobbyAsync());
+        joinLobbyButton.onClick.AddListener(async () => await SessionManager.Instance.JoinLobbyWithCode(lobbyCodeInputField.text));
+    }
 
-        onStartHost += SessionManager.Instance.StartHost;
-        onStartClient += SessionManager.Instance.StartClient;
+    void OnEnable()
+    {
+        submitAction.action.performed += OnSubmit;
+    }
 
+    void OnDisable()
+    {
+        submitAction.action.performed -= OnSubmit;
+    }
+
+    void OnSubmit(InputAction.CallbackContext context)
+    {
+        if (lobbyCodeInputField.isFocused)
+        {
+            joinLobbyButton.onClick?.Invoke();
+        }
     }
 }
