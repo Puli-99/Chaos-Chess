@@ -1,4 +1,3 @@
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,6 +7,8 @@ public class UILobbyManager : MonoBehaviour
     [SerializeField] Toggle playerReadyToggle;
     [SerializeField] TMP_Text codeText;
     [SerializeField] TMP_Text playersReadyText;
+    [SerializeField] TMP_Text connectedPlayersText;
+    [SerializeField] Button menuButton;
 
     void Start()
     {
@@ -19,6 +20,13 @@ public class UILobbyManager : MonoBehaviour
         });
 
         SessionManager.Instance.OnSessionChanged += RefreshUI;
+
+        menuButton.onClick.AddListener(async () => await SessionManager.Instance.QuitLobby());
+    }
+
+    private void Update()
+    {
+        connectedPlayersText.text = SessionManager.Instance.Session.PlayerCount.ToString();
     }
 
     private void OnDisable()
@@ -29,18 +37,15 @@ public class UILobbyManager : MonoBehaviour
     void RefreshUI()
     {
         int readyCount = 0;
-        int total = 0;
 
         foreach (var player in SessionManager.Instance.Session.Players)
         {
-            total++;
-
             if (player.Properties.TryGetValue("PlayerReady", out var r) && r.Value == "True")
             {
                 readyCount++;
             }
 
-            playersReadyText.text = $"{readyCount}/{total} ready";
+            playersReadyText.text = $"{readyCount}/{SessionManager.Instance.Session.MaxPlayers} ready";
         }
     }
 }

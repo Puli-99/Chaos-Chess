@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.Netcode;
+using Unity.Services.Authentication;
+using Unity.Services.Core;
+using Unity.Services.Lobbies;
+using Unity.Services.Multiplayer;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Unity.Netcode;
-using Unity.Services.Core;
-using Unity.Services.Authentication;
-using Unity.Services.Multiplayer;
 
 public enum MatchType { None, FlagCapturem, Deathmatch } // Ejemplo de la clase
 
@@ -14,11 +15,17 @@ public class SessionManager : MonoBehaviour
 {
     NetworkManager NetManager => NetworkManager.Singleton;
     public event Action OnSessionChanged;
+    public event Action OnCreateLobby;
+    public event Action<string> OnCreateLobbyException;
+    public Func<string> message;
+    public event Action OnJoinLobby;
+    public event Action<string> OnJoinLobbyException;
     ISession session;
     public ISession Session => session;
     bool isStartingGame = false;
 
-    const string c_GameScene = "GameScene";
+    const string c_MenuScene = "MenuScene";
+    const string c_GameScene = "OnlineGameScene";
     const string c_LobbyScene = "LobbyScene";
     const string c_Key_MatchType = "MatchType";
     const string c_Key_PlayerName = "PlayerName";
@@ -52,11 +59,10 @@ public class SessionManager : MonoBehaviour
     {
         try
         {
-            if (UnityServices.State != ServicesInitializationState.Initialized)
-            await UnityServices.InitializeAsync();
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            if (UnityServices.State != ServicesInitializationState.Initialized) await UnityServices.InitializeAsync();
+            if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
-            Debug.Log("Sign in succeed: " + AuthenticationService.Instance.PlayerId);
+            //Debug.Log("Sign in succeed: " + AuthenticationService.Instance.PlayerId);
             return true;
         }
         catch (Exception e)
@@ -71,6 +77,8 @@ public class SessionManager : MonoBehaviour
         try
         {
             if (!await InitializeUGS()) Debug.LogError("UGS not initialized");
+
+            OnCreateLobby?.Invoke();
 
             hostName ??= AuthenticationService.Instance.PlayerId;
 
@@ -100,23 +108,51 @@ public class SessionManager : MonoBehaviour
 
             SceneManager.LoadScene(c_LobbyScene, LoadSceneMode.Single);
 
-            Debug.Log($"Player Name: {session.CurrentPlayer.Properties[c_Key_PlayerName].Value}");
-            Debug.Log($"MatchType : {session.Properties[c_Key_MatchType].Value}");
-            Debug.Log("Session Code: " + session.Code); // cambiar esto a UI
+           // Debug.Log($"Player Name: {session.CurrentPlayer.Properties[c_Key_PlayerName].Value}");
+           // Debug.Log($"MatchType : {session.Properties[c_Key_MatchType].Value}");
+           // Debug.Log("Session Code: " + session.Code); // cambiar esto a UI
 
         }
         catch (Exception e)
         {
+            OnCreateLobbyException?.Invoke("Could not create lobby. Try again"); // cambiar esto a un switch de tipos de excepcion
             Debug.LogException(e);
         }
     }
 
+    public async Task QuitLobby()
+    {
+        if (session.IsHost)
+        {
+            Debug.Log("Quitting to Lobby...");
+
+            try
+            {
+                // DesuscribeEvents() hace falta?
+                // Limpiar session y volver al menu de forma local?
+                // Crear Session_End para avisar al cliente y sacarlo a el tambien?
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+        else
+        {
+            // Irse de la sesión limpiando sus datos de sesion mas sus datos del authenticator?
+             await session.LeaveAsync();
+             SceneManager.LoadScene(c_MenuScene, LoadSceneMode.Single);
+        }
+    }
 
     public async Task JoinLobbyWithCode(string joinCode, string playerName = default)
     {
         try
         {
             if (!await InitializeUGS()) Debug.LogError("UGS not initialized");
+
+            OnJoinLobby?.Invoke();
+
             playerName ??= AuthenticationService.Instance.PlayerId;
 
             session = await MultiplayerService.Instance.JoinSessionByCodeAsync(joinCode);
@@ -131,6 +167,7 @@ public class SessionManager : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogException(e);
+            OnJoinLobbyException?.Invoke("Could not join lobby. Try again."); // cambiar esto a un switch de tipos de excepcion
         }
     }
 
@@ -150,6 +187,7 @@ public class SessionManager : MonoBehaviour
     {
         session.Changed -= Session_Changed;
     }
+
     private async void Session_Changed()
     {
         // aca va el Relay
@@ -168,7 +206,7 @@ public class SessionManager : MonoBehaviour
             }
         }
 
-        if (readyCount < session.PlayerCount) return;
+        if (readyCount != session.MaxPlayers) return;
 
         isStartingGame = true;
 
@@ -219,4 +257,10 @@ public class SessionManager : MonoBehaviour
         Debug.Log($"All loaded {sceneName}, with: {clientsCompleted.Count}. {clientsTimedOut.Count} timed out");
     }
 
+    void AuthenticationCallbacks()
+    {
+        AuthenticationService.Instance.SignInFailed += (err) => { Debug.Log("Sign in failed: " + err); };
+        AuthenticationService.Instance.SignedOut += () => { Debug.Log("Player signed out."); };
+        AuthenticationService.Instance.Expired += () => { Debug.Log("Player session could not be refreshed and expired."); };
+    }
 }

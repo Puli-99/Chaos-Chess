@@ -16,9 +16,11 @@ public abstract class ChessPiece : MonoBehaviour
     public PieceColor Side => side;
     public PieceType Type => type;
     public Vector2Int StartPosition => startPosition;
-    public Vector2Int Position { get; set; }   // solo Board debería escribirla
+    public Vector2Int Position { get; set; }
+    public int Id { get; private set; }
 
 
+    public void SetId(int id) => Id = id;
     public abstract List<Vector2Int> GetValidMoves(Board board);
     public virtual List<Vector2Int> GetPotentialMoves(Board board) => GetValidMoves(board);
 

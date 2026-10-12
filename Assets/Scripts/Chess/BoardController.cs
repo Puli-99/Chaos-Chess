@@ -1,6 +1,7 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,17 +14,15 @@ public class BoardController : MonoBehaviour
     [SerializeField] InputActionReference pointAction;
     [SerializeField] InputActionReference selectAction;
     [SerializeField] InputActionReference deselectAction;
-    [SerializeField] GameObject highlightPrefab;        // movimientos posibles ahora mismo
-    [SerializeField] GameObject highlightPotentialPrefab;  // movimientos que dependen de que el tablero cambie
+    [SerializeField] GameObject highlightPrefab;
+    [SerializeField] GameObject highlightPotentialPrefab;
 
     Vector3 lastHit;
 
     ChessPiece selected;
-    List<Vector2Int> currentMoves = new(); // posibles ahora (GetValidMoves)
-    List<Vector2Int> potentialMoves = new(); // todas las alternativas (GetPotentialMoves); incluye las actuales
+    List<Vector2Int> currentMoves = new();
+    List<Vector2Int> potentialMoves = new();
     readonly List<GameObject> highlights = new();
-
-    // Se marca cuando el Board cambia; el refresco real se hace una vez por frame en LateUpdate.
     bool boardChanged;
 
     Board Board => GameManager.Instance.Board;
@@ -44,12 +43,16 @@ public class BoardController : MonoBehaviour
     void OnDisable()
     {
         selectAction.action.performed -= OnSelect;
+        deselectAction.action.performed -= OnDeselect;
     }
 
     // GameManager crea el Board en su Awake, por eso la suscripción va en Start (igual que en Ghost).
     void Start()
     {
         Board.Changed += OnBoardChanged;
+
+        localSide = NetworkManager.Singleton.IsHost? PieceColor.White: PieceColor.Black;
+        Debug.Log(NetworkManager.Singleton.IsHost);
     }
 
     void OnDestroy()
@@ -108,7 +111,7 @@ public class BoardController : MonoBehaviour
         // Se valida contra todas las alternativas, no solo las posibles ahora mismo.
         if (selected != null && potentialMoves.Contains(cell))
         {
-            GameManager.Instance.RequestMove(selected, cell, localSide);
+            GameManager.Instance.RequestMoveRpc(selected.Id, cell, localSide);
             Deselect();
             return;
         }

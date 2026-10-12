@@ -1,9 +1,9 @@
+using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.UI;
 
 public enum GameState { None, Lobby, AllReady, ChessPlay, PPT, EndGame }
 
-public class GameManager : MonoBehaviour
+public class GameManager : NetworkBehaviour
 {
     [SerializeField] GameState gameState;
     [SerializeField] BoardSpace space;
@@ -29,10 +29,11 @@ public class GameManager : MonoBehaviour
 
         Board = new Board();
 
-        foreach (ChessPiece piece in pieces)
+        for (int i = 0; i < pieces.Length; i++)
         {
-            Board.PlacePiece(piece, piece.StartPosition);
-            piece.transform.position = space.GridToWorld(piece.StartPosition);
+            pieces[i].SetId(i);
+            Board.PlacePiece(pieces[i], pieces[i].StartPosition);
+            pieces[i].transform.position = space.GridToWorld(pieces[i].StartPosition);
         }
 
         InitializingSystems();
@@ -66,7 +67,17 @@ public class GameManager : MonoBehaviour
         PPT.MatchResolved += OnPPTResolved;
     }
 
-    //Futuro ServerRpc
+    ChessPiece Piece(int id) => id >= 0 && id < pieces.Length ? pieces[id] : null;
+
+    [Rpc(SendTo.Everyone)] // Cambiar por una mejor implementacion
+    public void RequestMoveRpc(int pieceId, Vector2Int destination, PieceColor requester)
+    {
+        ChessPiece piece = Piece(pieceId);
+        if (piece == null) return;
+
+        RequestMove(piece, destination, requester);
+    }
+
     public bool RequestMove(ChessPiece piece, Vector2Int destination, PieceColor requester)
     {
         if (gameState != GameState.ChessPlay) return false;
@@ -75,6 +86,9 @@ public class GameManager : MonoBehaviour
 
         return Movement.TryStartOrder(piece, destination, Clock.Now);
     }
+
+    [Rpc(SendTo.Everyone)] // Cambiar por una mejor implementacion
+    public void RequestPPTSelectionRpc(int roundId, PPTChoice choice, PieceColor req) => RequestPPTSelection(roundId, choice, req);
 
     public bool RequestPPTSelection(int roundId, PPTChoice choice, PieceColor requester)
     => gameState == GameState.PPT && PPT.TrySelect(roundId, choice, requester);
