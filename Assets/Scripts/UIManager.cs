@@ -1,13 +1,19 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
     [SerializeField] Image progressBar;
+    [SerializeField] GameObject PPTUI;
     [SerializeField] GameObject UI;
+
+    [SerializeField] Image fade;
+
 
     void Start()
     {
+        StartCoroutine(OpeningScene());
         GameManager.Instance.PPT.RoundResolved += OnRoundResolved; // En Start para esperar a que GameManager le de valor a PPT.
     }
 
@@ -20,13 +26,37 @@ public class UIManager : MonoBehaviour
     {
         if (GameManager.Instance.GameState == GameState.PPT)
         {
-            UI.SetActive(true);
+            PPTUI.SetActive(true);
             progressBar.fillAmount -= Time.fixedDeltaTime / GameManager.Instance.PPTSelectionTime;
         }
 
         if (GameManager.Instance.GameState != GameState.PPT)
         {
-            UI.SetActive(false);
+            PPTUI.SetActive(false);
         }
+    }
+
+    IEnumerator OpeningScene() // Agregar countdown, desbloqueo de controller, etc
+    {
+        float duration = 1f;
+        float elapsed = 0f;
+
+        Color color = fade.color;
+        color.a = 1f;
+        fade.color = color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            color.a = 1f - Mathf.Clamp01(elapsed / duration);
+            fade.color = color;
+
+            yield return null;
+        }
+
+        color.a = 0f;
+        fade.color = color;
+        UI.SetActive(false);
     }
 }

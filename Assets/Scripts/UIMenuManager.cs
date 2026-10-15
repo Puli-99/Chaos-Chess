@@ -1,6 +1,5 @@
-using System;
+using System.Collections;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -9,20 +8,32 @@ using WebSocketSharp;
 
 public class UIMenuManager : MonoBehaviour
 {
+    [Header("Interactables")]
     [SerializeField] Button tutorialButton;
     [SerializeField] Button createLobbyButton;
     [SerializeField] Button joinLobbyButton;
     [SerializeField] TMP_InputField lobbyCodeInputField;
+
+    [Header("Input References")]
     [SerializeField] InputActionReference submitAction;
-    [SerializeField] bl_LoadingEffect loadingCircle;
+
+    [Header("Error box")]
     [SerializeField] GameObject errorImage;
     [SerializeField] TMP_Text errorText;
 
+    [Header("Loading effects")]
+    [SerializeField] bl_LoadingEffect loadingCircle;
+    [SerializeField] Image fade;
+
+    const string c_LobbyScene = "LobbyScene";
+    const string c_TutorialScene = "LocalGameScene";
+
+
     void Start()
     {
+        StartCoroutine(OpeningScene());
         createLobbyButton.onClick.AddListener(async () => await SessionManager.Instance.InitializeLobbyAsync());
         joinLobbyButton.onClick.AddListener(async () => await SessionManager.Instance.JoinLobbyWithCode(lobbyCodeInputField.text));
-
     }
 
     void OnEnable()
@@ -32,15 +43,21 @@ public class UIMenuManager : MonoBehaviour
         SessionManager.Instance.OnCreateLobby += OnLoading;
         SessionManager.Instance.OnCreateLobbyException += OnLoadingFailed;
 
-        SessionManager.Instance.OnJoinLobby += OnLoading;
+        SessionManager.Instance.OnJoiningLobby += OnLoading;
+        SessionManager.Instance.OnJoinedLobby += LoadScene;
         SessionManager.Instance.OnJoinLobbyException += OnLoadingFailed;
     }
 
     void OnDisable()
     {
         submitAction.action.performed -= OnSubmit;
+
         SessionManager.Instance.OnCreateLobby -= OnLoading;
         SessionManager.Instance.OnCreateLobbyException -= OnLoadingFailed;
+
+        SessionManager.Instance.OnJoiningLobby -= OnLoading;
+        SessionManager.Instance.OnJoinedLobby -= LoadScene;
+        SessionManager.Instance.OnJoinLobbyException -= OnLoadingFailed;
     }
 
     void OnSubmit(InputAction.CallbackContext context)
@@ -59,11 +76,16 @@ public class UIMenuManager : MonoBehaviour
         loadingCircle.isLoading = true;
     }
 
-    void  OnLoadingFailed(string exception)
+    void LoadScene()
+    {
+        StartCoroutine(LoadingScene(c_LobbyScene));
+    }
+
+    void OnLoadingFailed(string exception)
     {
         errorImage.SetActive(true);
         errorText.text = exception;
-        ChangeButtonsEnability();        
+        ChangeButtonsEnability();
         loadingCircle.isLoading = false;
     }
 
@@ -82,6 +104,56 @@ public class UIMenuManager : MonoBehaviour
 
     public void TutorialScene()
     {
-        SceneManager.LoadScene("LocalGameScene");
+        StartCoroutine(LoadingScene(c_TutorialScene));
+    }
+
+    IEnumerator LoadingScene(string scene)
+    {
+        float duration = 1f;
+        float elapsed = 0f;
+
+
+        Color color = fade.color;
+        color.a = 0f;
+        fade.color = color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            color.a = Mathf.Clamp01(elapsed / duration);
+            fade.color = color;
+
+            yield return null;
+        }
+
+
+        if (loadingCircle.isLoading)
+            loadingCircle.isLoading = false;
+
+        SceneManager.LoadScene(scene);
+    }
+
+    IEnumerator OpeningScene()
+    {
+        float duration = 1f;
+        float elapsed = 0f;
+
+        Color color = fade.color;
+        color.a = 1f;
+        fade.color = color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            color.a = 1f - Mathf.Clamp01(elapsed / duration);
+            fade.color = color;
+
+            yield return null;
+        }
+
+        color.a = 0f;
+        fade.color = color;
     }
 }

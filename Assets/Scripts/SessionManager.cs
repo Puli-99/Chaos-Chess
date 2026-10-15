@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
-using Unity.Services.Lobbies;
 using Unity.Services.Multiplayer;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,7 +17,8 @@ public class SessionManager : MonoBehaviour
     public event Action OnCreateLobby;
     public event Action<string> OnCreateLobbyException;
     public Func<string> message;
-    public event Action OnJoinLobby;
+    public event Action OnJoiningLobby;
+    public event Action OnJoinedLobby;
     public event Action<string> OnJoinLobbyException;
     ISession session;
     public ISession Session => session;
@@ -26,7 +26,6 @@ public class SessionManager : MonoBehaviour
 
     const string c_MenuScene = "MenuScene";
     const string c_GameScene = "OnlineGameScene";
-    const string c_LobbyScene = "LobbyScene";
     const string c_Key_MatchType = "MatchType";
     const string c_Key_PlayerName = "PlayerName";
     const string c_Key_PlayerReady = "PlayerReady";
@@ -106,7 +105,8 @@ public class SessionManager : MonoBehaviour
             await hostSession.SaveCurrentPlayerDataAsync();
             await hostSession.SavePropertiesAsync();
 
-            SceneManager.LoadScene(c_LobbyScene, LoadSceneMode.Single);
+
+            OnJoinedLobby?.Invoke();
 
            // Debug.Log($"Player Name: {session.CurrentPlayer.Properties[c_Key_PlayerName].Value}");
            // Debug.Log($"MatchType : {session.Properties[c_Key_MatchType].Value}");
@@ -118,32 +118,7 @@ public class SessionManager : MonoBehaviour
             OnCreateLobbyException?.Invoke("Could not create lobby. Try again"); // cambiar esto a un switch de tipos de excepcion
             Debug.LogException(e);
         }
-    }
-
-    public async Task QuitLobby()
-    {
-        if (session.IsHost)
-        {
-            Debug.Log("Quitting to Lobby...");
-
-            try
-            {
-                // DesuscribeEvents() hace falta?
-                // Limpiar session y volver al menu de forma local?
-                // Crear Session_End para avisar al cliente y sacarlo a el tambien?
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
-        }
-        else
-        {
-            // Irse de la sesión limpiando sus datos de sesion mas sus datos del authenticator?
-             await session.LeaveAsync();
-             SceneManager.LoadScene(c_MenuScene, LoadSceneMode.Single);
-        }
-    }
+    }    
 
     public async Task JoinLobbyWithCode(string joinCode, string playerName = default)
     {
@@ -151,7 +126,7 @@ public class SessionManager : MonoBehaviour
         {
             if (!await InitializeUGS()) Debug.LogError("UGS not initialized");
 
-            OnJoinLobby?.Invoke();
+            OnJoiningLobby?.Invoke();
 
             playerName ??= AuthenticationService.Instance.PlayerId;
 
@@ -162,15 +137,33 @@ public class SessionManager : MonoBehaviour
             session.CurrentPlayer.SetProperty(c_Key_PlayerName, new PlayerProperty(playerName, VisibilityPropertyOptions.Public));
             await session.SaveCurrentPlayerDataAsync();
 
-            SceneManager.LoadScene(c_LobbyScene, LoadSceneMode.Single);
+            OnJoinedLobby?.Invoke();
         }
         catch (Exception e)
         {
+            string message = e.Message switch // bloque temporal hasta encontrar una mejor forma de catchear tipo de excepcion
+            {
+                var m when m.Contains("Argument should be non-null, non-empty & not only whitespaces.")
+                    => "Empty code",
+
+                var m when m.Contains("contains an invalid character")
+                    => "Invalid join code",
+
+                var m when m.Contains("lobby not found")
+                    => "Lobby not found",
+
+                _ => "Could not join lobby. Try again"
+            };
+
             Debug.LogException(e);
-            OnJoinLobbyException?.Invoke("Could not join lobby. Try again."); // cambiar esto a un switch de tipos de excepcion
-        }
+            OnJoinLobbyException?.Invoke(message);        }
     }
 
+    public async Task QuitLobby()
+    {
+        await session.LeaveAsync();
+        SceneManager.LoadScene(c_MenuScene, LoadSceneMode.Single);
+    }
 
     public async Task SetReadyAsync(bool isReady = true)
     {
@@ -188,7 +181,7 @@ public class SessionManager : MonoBehaviour
         session.Changed -= Session_Changed;
     }
 
-    private async void Session_Changed()
+    async void Session_Changed()
     {
         // aca va el Relay
         Debug.Log("Players connected: " + session.PlayerCount);
@@ -217,13 +210,14 @@ public class SessionManager : MonoBehaviour
             await hostSession.SavePropertiesAsync();
             await hostSession.Network.StartRelayNetworkAsync(new RelayNetworkOptions());
             NetManager.SceneManager.LoadScene(c_GameScene, LoadSceneMode.Single);
-
         }
         catch (Exception e)
         {
             Debug.LogException(e);
         }
     }
+
+    #region Callbacks
 
     void NetworkManager_OnClientConnectedCallback(ulong clientID)
     {
@@ -263,4 +257,5 @@ public class SessionManager : MonoBehaviour
         AuthenticationService.Instance.SignedOut += () => { Debug.Log("Player signed out."); };
         AuthenticationService.Instance.Expired += () => { Debug.Log("Player session could not be refreshed and expired."); };
     }
+    #endregion
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,11 +8,16 @@ public class UILobbyManager : MonoBehaviour
     [SerializeField] Toggle playerReadyToggle;
     [SerializeField] TMP_Text codeText;
     [SerializeField] TMP_Text playersReadyText;
-    [SerializeField] TMP_Text connectedPlayersText;
     [SerializeField] Button menuButton;
+    [SerializeField] Image fade;
+
+    bool coroutineStarted;
+
 
     void Start()
     {
+        StartCoroutine(OpeningScene());
+
         codeText.text = $"Invite Code: {SessionManager.Instance.Session.Code}";
 
         playerReadyToggle.onValueChanged.AddListener( async ready =>
@@ -24,14 +30,10 @@ public class UILobbyManager : MonoBehaviour
         menuButton.onClick.AddListener(async () => await SessionManager.Instance.QuitLobby());
     }
 
-    private void Update()
-    {
-        connectedPlayersText.text = SessionManager.Instance.Session.PlayerCount.ToString();
-    }
-
-    private void OnDisable()
+    void OnDisable()
     {
         SessionManager.Instance.OnSessionChanged -= RefreshUI;
+
     }
 
     void RefreshUI()
@@ -47,5 +49,55 @@ public class UILobbyManager : MonoBehaviour
 
             playersReadyText.text = $"{readyCount}/{SessionManager.Instance.Session.MaxPlayers} ready";
         }
+
+        if (readyCount == 2 && coroutineStarted == false)
+        {
+            coroutineStarted = true;
+            StartCoroutine(LoadingScene());
+        }
+    }
+
+    IEnumerator LoadingScene()
+    {
+        float duration = 1f;
+        float elapsed = 0f;
+
+
+        Color color = fade.color;
+        color.a = 0f;
+        fade.color = color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            color.a = Mathf.Clamp01(elapsed / duration);
+            fade.color = color;
+
+            yield return null;
+        }
+    }
+
+    IEnumerator OpeningScene()
+    {
+        float duration = 1f;
+        float elapsed = 0f;
+
+        Color color = fade.color;
+        color.a = 1f;
+        fade.color = color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            color.a = 1f - Mathf.Clamp01(elapsed / duration);
+            fade.color = color;
+
+            yield return null;
+        }
+
+        color.a = 0f;
+        fade.color = color;
     }
 }
