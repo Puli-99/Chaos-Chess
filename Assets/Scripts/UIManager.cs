@@ -22,6 +22,19 @@ public class UIManager : MonoBehaviour
         progressBar.fillAmount = 1;
     }
 
+    private void Update()
+    {
+        OnWin();
+    }
+
+    void OnWin()
+    {
+        if (GameManager.Instance.GameState == GameState.EndGame)
+        {
+            Debug.Log("The game ended");
+        }
+    }
+
     void FixedUpdate()
     {
         if (GameManager.Instance.GameState == GameState.PPT)

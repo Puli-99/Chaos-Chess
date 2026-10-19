@@ -69,7 +69,6 @@ public class MovementSystem
         {
             if (rival.Piece.Side == piece.Side)
             {
-                // Aliadas: ambas anulan su movimiento y quedan en sus casillas
                 End(order, MoveEndReason.BlockedByAlly);
                 End(rival, MoveEndReason.BlockedByAlly);
                 return false;
@@ -166,4 +165,41 @@ public class MovementSystem
     }
 
     MoveOrder FindOrder(ChessPiece piece) => active.Find(o => o.Piece == piece);
+
+    // Lo simulado en el servidor, se replica y muestra al cliente (ejecutado en GameManager con Rcp(SendTo.NotServer)
+    #region Client Synchronization
+
+    public void ReplicateStepStarted(ChessPiece piece, Vector2Int destination, Vector2Int direction, float start, float arrival)
+    {
+        MoveOrder order = FindOrder(piece);
+        if (order == null)
+        {
+            order = new MoveOrder(piece, destination, direction);
+            active.Add(order); // así IsMoving funciona también en el cliente
+        }
+        order.StepStartTime = start;
+        order.StepArrivalTime = arrival;
+        StepStarted?.Invoke(order);
+    }
+
+    public void ReplicateStepCompleted(ChessPiece piece, Vector2Int cell)
+    {
+        MoveOrder order = FindOrder(piece);
+        if (order == null) return;
+        ChessPiece captured = board.MovePieceTo(piece, cell); // dispara Board.Changed
+        StepCompleted?.Invoke(order, captured);
+    }
+
+    public void ReplicateOrderEnded(ChessPiece piece, MoveEndReason reason)
+    {
+        MoveOrder order = FindOrder(piece);
+        if (order != null) End(order, reason);
+    }
+
+    public void ReplicatePieceCaptured(ChessPiece piece)
+    {
+        board.RemovePiece(piece);
+        PieceCaptured?.Invoke(piece);
+    }
+    #endregion
 }

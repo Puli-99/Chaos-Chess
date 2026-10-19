@@ -62,11 +62,11 @@ public class Ghost : MonoBehaviour
     {
         foreach (var pair in ghosts)
         {
-            MoveOrder o = pair.Key;
-            float t = Mathf.InverseLerp(o.StepStartTime, o.StepArrivalTime, gm.Clock.Now);
-            Vector3 from = gm.Space.GridToWorld(o.Piece.Position);
-            Vector3 to = gm.Space.GridToWorld(o.NextCell);
-            pair.Value.transform.position = Vector3.Lerp(from, to, t);
+            MoveOrder order = pair.Key;
+            float time = Mathf.InverseLerp(order.StepStartTime, order.StepArrivalTime, gm.Clock.Now);
+            Vector3 from = gm.Space.GridToWorld(order.Piece.Position);
+            Vector3 to = gm.Space.GridToWorld(order.NextCell);
+            pair.Value.transform.position = Vector3.Lerp(from, to, time);
         }
     }
 }

@@ -127,4 +127,11 @@ public class PPTSystem
     }
 
     static PPTChoice RandomChoice() => (PPTChoice)UnityEngine.Random.Range(1, 4);
+
+
+    #region Client Synchronization
+    public void ReplicateRoundStarted(PPTRound round) => RoundStarted?.Invoke(round);
+    public void ReplicateSelectionAccepted(PieceColor side) => SelectionAccepted?.Invoke(side);
+    public void ReplicateRoundResolved(PPTRoundResult result) => RoundResolved?.Invoke(result);
+    #endregion
 }

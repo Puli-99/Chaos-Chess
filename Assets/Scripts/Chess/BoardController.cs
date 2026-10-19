@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class BoardController : MonoBehaviour
 {
@@ -44,23 +45,18 @@ public class BoardController : MonoBehaviour
     {
         selectAction.action.performed -= OnSelect;
         deselectAction.action.performed -= OnDeselect;
+        Board.Changed -= OnBoardChanged;
     }
 
-    // GameManager crea el Board en su Awake, por eso la suscripción va en Start (igual que en Ghost).
     void Start()
     {
         Board.Changed += OnBoardChanged;
 
-        localSide = NetworkManager.Singleton.IsHost? PieceColor.White: PieceColor.Black;
-        Debug.Log(NetworkManager.Singleton.IsHost);
+        if (!GameManager.Instance.IsLocalScene)
+        {
+            localSide = NetworkManager.Singleton.IsHost? PieceColor.White: PieceColor.Black;
+        }
     }
-
-    void OnDestroy()
-    {
-        if (GameManager.Instance != null) Board.Changed -= OnBoardChanged;
-    }
-
-    void OnBoardChanged() => boardChanged = true;
 
     void LateUpdate()
     {
@@ -68,6 +64,8 @@ public class BoardController : MonoBehaviour
         boardChanged = false;
         RefreshSelection();
     }
+
+    void OnBoardChanged() => boardChanged = true;
 
     void OnSelect(InputAction.CallbackContext context)
     {
@@ -94,24 +92,19 @@ public class BoardController : MonoBehaviour
         Deselect();
     }
 
-    #region Visual Debug
-
-    void OnDrawGizmos()
-    {
-        if (!Application.isPlaying) return;
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawSphere(lastHit, 0.1f);
-    }
-    #endregion
-
     void HandleClick(Vector2Int cell)
     {
-        // Esta rama va primero a propósito: una pieza enemiga en movimiento sigue ocupando
-        // su casilla lógica, así que sigue siendo un objetivo válido de captura.
-        // Se valida contra todas las alternativas, no solo las posibles ahora mismo.
         if (selected != null && potentialMoves.Contains(cell))
         {
-            GameManager.Instance.RequestMoveRpc(selected.Id, cell, localSide);
+            if (!GameManager.Instance.IsLocalScene)
+            {
+                GameManager.Instance.RequestMoveRpc(selected.Id, cell);
+            }
+            else
+            {
+                GameManager.Instance.RequestMove(selected, cell, localSide);
+            }
+
             Deselect();
             return;
         }
@@ -129,12 +122,10 @@ public class BoardController : MonoBehaviour
         RebuildHighlights();
     }
 
-    // Recalcula los movimientos de la pieza seleccionada tras un cambio en el tablero.
     void RefreshSelection()
     {
         if (selected == null) return;
 
-        // Si la capturaron, el tablero ya no la tiene en su casilla.
         if (Board.GetNode(selected.Position)?.Occupant != selected)
         {
             Deselect();
@@ -144,8 +135,6 @@ public class BoardController : MonoBehaviour
         List<Vector2Int> updatedCurrent = selected.GetValidMoves(Board);
         List<Vector2Int> updatedPotential = selected.GetPotentialMoves(Board);
 
-        // Hay que comparar las dos listas: las alternativas pueden ser las mismas y aun así
-        // haber cambiado cuáles son posibles ahora (y por lo tanto el prefab de cada casilla).
         if (updatedCurrent.SequenceEqual(currentMoves) && updatedPotential.SequenceEqual(potentialMoves)) return;
 
         currentMoves = updatedCurrent;
@@ -176,4 +165,14 @@ public class BoardController : MonoBehaviour
         foreach (GameObject h in highlights) Destroy(h);
         highlights.Clear();
     }
+
+    #region Visual Debug
+
+    void OnDrawGizmos()
+    {
+        if (!Application.isPlaying) return;
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawSphere(lastHit, 0.1f);
+    }
+    #endregion
 }

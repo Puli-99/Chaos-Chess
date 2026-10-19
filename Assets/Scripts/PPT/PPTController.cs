@@ -29,5 +29,9 @@ public class PPTController : MonoBehaviour
     public void ChoosePaper() => Choose(PPTChoice.Paper);
     public void ChooseScissors() => Choose(PPTChoice.Scissors);
 
-    void Choose(PPTChoice choice) => gm.RequestPPTSelectionRpc(currentRound, choice, localSide);
+    void Choose(PPTChoice choice)
+    {
+        if (gm.IsLocalScene) gm.RequestPPTSelection(currentRound, choice, localSide);
+        else gm.RequestPPTSelectionRpc(currentRound, choice);
+    }
 }
